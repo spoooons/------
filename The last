@@ -1,0 +1,86 @@
+#-*- encoding: utf-8 -*-
+import os
+import urllib2
+import HTMLParser
+
+names=[]
+urls=[]
+
+# 输出文件名
+EXPORT_FILENAME="aria.down"
+
+# 公开课页面地址
+PAGE_URL=" http://v.163.com/special/opencourse/algorithms.html"
+
+# 是否在程序运行结束就立即开始下载
+START_AFTER_EXPORT=False
+
+
+# OCParser 类
+# ---------------------------------------
+# 继承 HTMLParser.HTMLParser 类
+
+class OCParser(HTMLParser.HTMLParser):
+def __init__(self):
+HTMLParser.HTMLParser.__init__(self)
+self.found=0
+
+def handle_starttag(self,tag,attrs):
+# 当发现一个起始标签时执行
+if tag=='a': 
+# 如果是一个超链接标签
+for name,value in attrs: 
+# 迭代查询所有标签
+if name=='href':
+# 读取链接到的地址
+if 'v.163.com/movie' in value:
+# 如果是一个课程名称，则标记
+self.found=1
+if 'mov.bn' in value:
+# 如果是一个视频下载地址，则把他加入超链接列表里
+urls.append(value)
+
+def handle_endtag(self,tag):
+# 当发现一个结束标签时执行
+pass
+
+def handle_data(self,data):
+# 当发现一个起始标签和结束标签中的数据时执行
+if self.found == 1:
+# 如果是课程名称，则把他加入课程名称列表里
+names.append(data)
+# 重置查找标记
+self.found=0
+
+if __name__ == '__main__':
+print '欢迎使用 网易公开课视频链接导出工具'
+print '-------------------------------------'
+# 下载页面，并转码
+content = urllib2.urlopen(PAGE_URL).read().decode('gbk').encode('utf-8')
+# 创建 OCParser类 的新实例
+ocp=OCParser()
+# 使用 feed() 方法开始解析传入的页面
+ocp.feed(content)
+
+# 打开新文件
+f=open(EXPORT_FILENAME,'w')
+
+# 针对每一对课程名和视频链接写入相应数据
+for i in range(0, len(urls)):
+f.write(urls[i]) # 写入URL
+f.write("\n  out=" + names[i+1] + '.' + urls[i].split('.')[-1]) # 写入文件名
+f.write("\n  continue=true") # 一些设置项
+f.write("\n  max-connection-per-server=5")
+f.write("\n  split=10")
+f.write("\n")
+
+print "--> 课程 %d " % (i + 1) + names[i+1]
+print "    URL: " + urls[i]
+# 关闭输出文件
+f.close()
+print '-------------------------------------'
+if START_AFTER_EXPORT:
+# 开始下载文件
+print "\n\n现在开始下载.."
+os.system("aria2c -i " + EXPORT_FILENAME)
+
