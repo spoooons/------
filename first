@@ -1,0 +1,62 @@
+#-*- encoding: utf-8 -*-
+import os
+import urllib2
+import HTMLParser
+
+names=[]
+urls=[]
+
+EXPORT_FILENAME="aria.down"
+
+PAGE_URL=" http://v.163.com/special/opencourse/algorithms.html"
+
+START_AFTER_EXPORT=False
+
+
+
+class OCParser(HTMLParser.HTMLParser):
+def __init__(self):
+HTMLParser.HTMLParser.__init__(self)
+self.found=0
+
+def handle_starttag(self,tag,attrs):
+if tag=='a': 
+for name,value in attrs: 
+if name=='href':
+if 'v.163.com/movie' in value:
+self.found=1
+if 'mov.bn' in value:
+urls.append(value)
+
+def handle_endtag(self,tag):
+pass
+
+def handle_data(self,data):
+if self.found == 1:
+names.append(data)
+self.found=0
+
+if __name__ == '__main__':
+print '欢迎使用 网易公开课视频链接导出工具'
+print '-------------------------------------'
+content = urllib2.urlopen(PAGE_URL).read().decode('gbk').encode('utf-8')
+ocp=OCParser()
+ocp.feed(content)
+
+f=open(EXPORT_FILENAME,'w')
+
+for i in range(0, len(urls)):
+f.write(urls[i]) # 写入URL
+f.write("\n  out=" + names[i+1] + '.' + urls[i].split('.')[-1]) # 写入文件名
+f.write("\n  continue=true") 
+f.write("\n  max-connection-per-server=5")
+f.write("\n  split=10")
+f.write("\n")
+
+print "--> 课程 %d " % (i + 1) + names[i+1]
+print "    URL: " + urls[i]
+f.close()
+print '-------------------------------------'
+if START_AFTER_EXPORT:
+print "\n\n现在开始下载.."
+os.system("aria2c -i " + EXPORT_FILENAME)
